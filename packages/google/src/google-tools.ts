@@ -1,5 +1,6 @@
 import { codeExecution } from './tool/code-execution';
 import { googleSearch } from './tool/google-search';
+import { retrieval } from './tool/retrieval';
 import { urlContext } from './tool/url-context';
 
 export const googleTools = {
@@ -25,4 +26,29 @@ export const googleTools = {
    * @see https://cloud.google.com/vertex-ai/generative-ai/docs/model-reference/code-execution-api (Vertex AI)
    */
   codeExecution,
+
+  /**
+   * A tool that enables Retrieval-Augmented Generation (RAG) by integrating
+   * with Vertex AI Search as a retrieval backend. This tool allows the model to
+   * retrieve relevant contexts from a RAG corpus based on search queries,
+   * providing enhanced performance and scalability for knowledge-based
+   * applications.
+   *
+   * The retrieval tool automatically retrieves data from Vertex AI Search when
+   * specified in requests, helping to ensure that the model gets the most
+   * relevant information from your corpus, leading to more accurate and
+   * informative responses. It supports various configuration options including:
+   * - Similarity-based top-k retrieval
+   * - Vector distance thresholds
+   * - Attribution controls
+   *
+   * Must have name "retrieval".
+   *
+   * @note Requires a configured RAG corpus with Vertex AI Search as the
+   * backend.
+   * @see
+   * https://cloud.google.com/vertex-ai/generative-ai/docs/rag-engine/use-vertexai-search
+   * (Vertex AI)
+   */
+  retrieval,
 };

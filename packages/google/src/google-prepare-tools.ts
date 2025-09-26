@@ -5,6 +5,7 @@ import {
 } from '@ai-sdk/provider';
 import { convertJSONSchemaToOpenAPISchema } from './convert-json-schema-to-openapi-schema';
 import { GoogleGenerativeAIModelId } from './google-generative-ai-options';
+import { retrievalArgsSchema } from './tool/retrieval';
 
 export function prepareTools({
   tools,
@@ -115,6 +116,29 @@ export function prepareTools({
             });
           }
           break;
+        case 'google-vertex.retrieval': {
+          if (isGemini2) {
+            const args = retrievalArgsSchema.parse(tool.args);
+            googleTools.retrieval = {
+              disable_attribution: args.disableAttribution,
+              vertex_rag_store: {
+                rag_resources: {
+                  rag_corpus: args.ragCorpusResource,
+                },
+                similarity_top_k: args.similarityTopK,
+                vector_distance_threshold: args.vectorDistanceThreshold,
+              },
+            };
+          } else {
+            toolWarnings.push({
+              type: 'unsupported-tool',
+              tool,
+              details:
+                'The RAG retrieval tool is not supported with other Gemini models than Gemini 2.',
+            });
+          }
+          break;
+        }
         default:
           toolWarnings.push({ type: 'unsupported-tool', tool });
           break;
