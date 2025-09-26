@@ -1,40 +1,57 @@
-import { ExperimentalMessage, experimental_streamText } from 'ai';
-import { OpenAI } from 'ai/openai';
-import dotenv from 'dotenv';
+import { openai } from '@ai-sdk/openai';
+import { stepCountIs, ModelMessage, streamText, tool } from 'ai';
+import 'dotenv/config';
 import * as readline from 'node:readline/promises';
-
-dotenv.config();
-
-const openai = new OpenAI();
+import { z } from 'zod';
 
 const terminal = readline.createInterface({
   input: process.stdin,
   output: process.stdout,
 });
 
-const messages: ExperimentalMessage[] = [];
+const messages: ModelMessage[] = [];
 
 async function main() {
   while (true) {
-    const userInput = await terminal.question('You: ');
+    messages.push({ role: 'user', content: await terminal.question('You: ') });
 
-    messages.push({ role: 'user', content: userInput });
-
-    const result = await experimental_streamText({
-      model: openai.chat('gpt-3.5-turbo'),
-      system: `You are a helpful, respectful and honest assistant.`,
+    const result = streamText({
+      model: openai('gpt-4o'),
+      tools: {
+        weather: tool({
+          description: 'Get the weather in a location',
+          inputSchema: z.object({
+            location: z
+              .string()
+              .describe('The location to get the weather for'),
+          }),
+          execute: ({ location }) => ({
+            location,
+            temperature: 72 + Math.floor(Math.random() * 21) - 10,
+          }),
+          toModelOutput: ({ location, temperature }) => ({
+            type: 'text',
+            value: `The weather in ${location} is ${temperature} degrees Fahrenheit.`,
+          }),
+        }),
+      },
+      stopWhen: stepCountIs(5),
       messages,
     });
 
-    let fullResponse = '';
     process.stdout.write('\nAssistant: ');
     for await (const delta of result.textStream) {
-      fullResponse += delta;
       process.stdout.write(delta);
     }
     process.stdout.write('\n\n');
 
-    messages.push({ role: 'assistant', content: fullResponse });
+    messages.push(...(await result.response).messages);
+
+    console.log(
+      (await result.steps)
+        .map(step => JSON.stringify(step.request.body))
+        .join('\n'),
+    );
   }
 }
 

@@ -1,35 +1,19 @@
-import {
-  StreamingTextResponse,
-  experimental_StreamData,
-  experimental_streamText,
-} from 'ai';
-import { openai } from 'ai/openai';
+import { openai } from '@ai-sdk/openai';
+import { streamText } from 'ai';
 
-export const runtime = 'edge';
+// Allow streaming responses up to 30 seconds
+export const maxDuration = 30;
 
 export async function POST(req: Request) {
   // Extract the `prompt` from the body of the request
   const { prompt } = await req.json();
 
-  const result = await experimental_streamText({
-    model: openai.completion('gpt-3.5-turbo-instruct'),
-    maxTokens: 2000,
+  // Ask OpenAI for a streaming completion given the prompt
+  const result = streamText({
+    model: openai('gpt-3.5-turbo-instruct'),
     prompt,
   });
 
-  // optional: use stream data
-  const data = new experimental_StreamData();
-
-  data.append({ test: 'value' });
-
-  // Convert the response into a friendly text-stream
-  const stream = result.toAIStream({
-    onFinal(completion) {
-      data.close();
-    },
-    experimental_streamData: true,
-  });
-
   // Respond with the stream
-  return new StreamingTextResponse(stream, {}, data);
+  return result.toUIMessageStreamResponse();
 }

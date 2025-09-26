@@ -1,20 +1,16 @@
-import { experimental_streamText } from 'ai';
-import { Mistral } from 'ai/mistral';
-import dotenv from 'dotenv';
+import { mistral } from '@ai-sdk/mistral';
+import { streamText } from 'ai';
+import 'dotenv/config';
 import { z } from 'zod';
 import { weatherTool } from '../tools/weather-tool';
 
-dotenv.config();
-
-const mistral = new Mistral();
-
 async function main() {
-  const result = await experimental_streamText({
-    model: mistral.chat('mistral-large-latest'),
+  const result = streamText({
+    model: mistral('mistral-large-latest'),
     tools: {
       weather: weatherTool,
       cityAttractions: {
-        parameters: z.object({ city: z.string() }),
+        inputSchema: z.object({ city: z.string() }),
       },
     },
     prompt: 'What is the weather in San Francisco?',
@@ -23,21 +19,25 @@ async function main() {
   for await (const part of result.fullStream) {
     switch (part.type) {
       case 'text-delta': {
-        console.log('Text delta:', part.textDelta);
+        console.log('Text:', part.text);
         break;
       }
 
       case 'tool-call': {
+        if (part.dynamic) {
+          continue;
+        }
+
         switch (part.toolName) {
           case 'cityAttractions': {
             console.log('TOOL CALL cityAttractions');
-            console.log(`city: ${part.args.city}`); // string
+            console.log(`city: ${part.input.city}`); // string
             break;
           }
 
           case 'weather': {
             console.log('TOOL CALL weather');
-            console.log(`location: ${part.args.location}`); // string
+            console.log(`location: ${part.input.location}`); // string
             break;
           }
         }
@@ -46,19 +46,23 @@ async function main() {
       }
 
       case 'tool-result': {
+        if (part.dynamic) {
+          continue;
+        }
+
         switch (part.toolName) {
           // NOT AVAILABLE (NO EXECUTE METHOD)
           // case 'cityAttractions': {
           //   console.log('TOOL RESULT cityAttractions');
-          //   console.log(`city: ${part.args.city}`); // string
+          //   console.log(`city: ${part.input.city}`); // string
           //   console.log(`result: ${part.result}`);
           //   break;
           // }
 
           case 'weather': {
             console.log('TOOL RESULT weather');
-            console.log(`location: ${part.args.location}`); // string
-            console.log(`temperature: ${part.result.temperature}`); // number
+            console.log(`location: ${part.input.location}`); // string
+            console.log(`temperature: ${part.output.temperature}`); // number
             break;
           }
         }
@@ -73,4 +77,4 @@ async function main() {
   }
 }
 
-main();
+main().catch(console.error);

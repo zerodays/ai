@@ -1,28 +1,22 @@
-import { DeepPartial, experimental_streamObject } from 'ai';
-import { OpenAI } from 'ai/openai';
-import dotenv from 'dotenv';
+import { openai } from '@ai-sdk/openai';
+import { streamObject } from 'ai';
+import 'dotenv/config';
 import { z } from 'zod';
 
-dotenv.config();
-
-const openai = new OpenAI();
-
 async function main() {
-  const schema = z.object({
-    characters: z.array(
-      z.object({
-        name: z.string(),
-        class: z
-          .string()
-          .describe('Character class, e.g. warrior, mage, or thief.'),
-        description: z.string(),
-      }),
-    ),
-  });
-  const result = await experimental_streamObject({
-    model: openai.chat('gpt-4-turbo-preview'),
-    maxTokens: 2000,
-    schema: schema,
+  const result = streamObject({
+    model: openai('gpt-4o-mini'),
+    schema: z.object({
+      characters: z.array(
+        z.object({
+          name: z.string(),
+          class: z
+            .string()
+            .describe('Character class, e.g. warrior, mage, or thief.'),
+          description: z.string(),
+        }),
+      ),
+    }),
     prompt:
       'Generate 3 character descriptions for a fantasy role playing game.',
   });
@@ -31,6 +25,8 @@ async function main() {
     console.clear();
     console.log(partialObject);
   }
+
+  console.log(JSON.stringify((await result.request).body, null, 2));
 }
 
-main();
+main().catch(console.error);

@@ -1,34 +1,52 @@
-import OpenAI from 'openai';
-import { OpenAIStream, StreamingTextResponse } from 'ai';
-
 import { env } from '$env/dynamic/private';
-// You may want to replace the above with a static private env variable
-// for dead-code elimination and build-time type-checking:
-// import { OPENAI_API_KEY } from '$env/static/private'
+import { createOpenAI } from '@ai-sdk/openai';
+import { convertToModelMessages, streamText, stepCountIs } from 'ai';
+import { z } from 'zod';
 
-import type { RequestHandler } from './$types';
-
-// Create an OpenAI API client
-const openai = new OpenAI({
-  apiKey: env.OPENAI_API_KEY || '',
+const openai = createOpenAI({
+  apiKey: env?.OPENAI_API_KEY,
 });
 
-export const POST = (async ({ request }) => {
-  // Extract the `prompt` from the body of the request
+export const POST = async ({ request }: { request: Request }) => {
   const { messages } = await request.json();
 
-  // Ask OpenAI for a streaming chat completion given the prompt
-  const response = await openai.chat.completions.create({
-    model: 'gpt-3.5-turbo',
-    stream: true,
-    messages: messages.map((message: any) => ({
-      content: message.content,
-      role: message.role,
-    })),
+  const result = streamText({
+    model: openai('gpt-4o'),
+    messages: convertToModelMessages(messages),
+    stopWhen: stepCountIs(5), // multi-steps for server-side tools
+    tools: {
+      // server-side tool with execute function:
+      getWeatherInformation: {
+        description: 'show the weather in a given city to the user',
+        inputSchema: z.object({ city: z.string() }),
+        execute: async ({ city: _ }: { city: string }) => {
+          // Add artificial delay of 2 seconds
+          await new Promise(resolve => setTimeout(resolve, 2000));
+
+          const weatherOptions = ['sunny', 'cloudy', 'rainy', 'snowy', 'windy'];
+          return weatherOptions[
+            Math.floor(Math.random() * weatherOptions.length)
+          ];
+        },
+      },
+      // client-side tool that starts user interaction:
+      askForConfirmation: {
+        description: 'Ask the user for confirmation.',
+        inputSchema: z.object({
+          message: z.string().describe('The message to ask for confirmation.'),
+        }),
+      },
+      // client-side tool that is automatically executed on the client:
+      getLocation: {
+        description:
+          'Get the user location. Always ask for confirmation before using this tool.',
+        inputSchema: z.object({}),
+      },
+    },
+    onError: error => {
+      console.error(error);
+    },
   });
 
-  // Convert the response into a friendly text-stream
-  const stream = OpenAIStream(response);
-  // Respond with the stream
-  return new StreamingTextResponse(stream);
-}) satisfies RequestHandler;
+  return result.toUIMessageStreamResponse();
+};

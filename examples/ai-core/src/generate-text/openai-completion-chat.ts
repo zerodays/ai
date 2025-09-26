@@ -1,15 +1,11 @@
-import { experimental_generateText } from 'ai';
-import { OpenAI } from 'ai/openai';
-import dotenv from 'dotenv';
-
-dotenv.config();
-
-const openai = new OpenAI();
+import { openai } from '@ai-sdk/openai';
+import { generateText } from 'ai';
+import 'dotenv/config';
 
 async function main() {
-  const result = await experimental_generateText({
-    model: openai.completion('gpt-3.5-turbo-instruct'),
-    maxTokens: 1024,
+  const result = await generateText({
+    model: openai('gpt-3.5-turbo-instruct'),
+    maxOutputTokens: 1024,
     system: 'You are a helpful chatbot.',
     messages: [
       {
@@ -30,4 +26,4 @@ async function main() {
   console.log(result.text);
 }
 
-main();
+main().catch(console.error);

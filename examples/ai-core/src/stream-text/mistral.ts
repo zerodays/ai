@@ -1,15 +1,11 @@
-import { experimental_streamText } from 'ai';
-import { Mistral } from 'ai/mistral';
-import dotenv from 'dotenv';
-
-dotenv.config();
-
-const mistral = new Mistral();
+import { mistral } from '@ai-sdk/mistral';
+import { streamText } from 'ai';
+import 'dotenv/config';
 
 async function main() {
-  const result = await experimental_streamText({
-    model: mistral.chat('open-mistral-7b'),
-    maxTokens: 512,
+  const result = streamText({
+    model: mistral('ministral-8b-latest'),
+    maxOutputTokens: 512,
     temperature: 0.3,
     maxRetries: 5,
     prompt: 'Invent a new holiday and describe its traditions.',
@@ -18,6 +14,10 @@ async function main() {
   for await (const textPart of result.textStream) {
     process.stdout.write(textPart);
   }
+
+  console.log();
+  console.log('Token usage:', await result.usage);
+  console.log('Finish reason:', await result.finishReason);
 }
 
-main();
+main().catch(console.error);

@@ -1,46 +1,40 @@
-import { OpenAIStream, StreamingTextResponse } from 'ai';
-import OpenAI from 'openai';
+import { createOpenAI } from '@ai-sdk/openai';
+import { convertToModelMessages, streamText, type UIMessage } from 'ai';
 
 export default defineLazyEventHandler(async () => {
   const apiKey = useRuntimeConfig().openaiApiKey;
   if (!apiKey) throw new Error('Missing OpenAI API key');
-  const openai = new OpenAI({
-    apiKey: apiKey,
-  });
+  const openai = createOpenAI({ apiKey });
 
   return defineEventHandler(async (event: any) => {
     // Extract the `prompt` from the body of the request
     const { messages, data } = await readBody(event);
 
-    const initialMessages = messages.slice(0, -1);
-    const currentMessage = messages[messages.length - 1];
+    const initialMessages = convertToModelMessages(messages.slice(0, -1));
+    const currentMessage = messages[messages.length - 1] as UIMessage;
 
     // Ask OpenAI for a streaming chat completion given the prompt
-    const response = await openai.chat.completions.create({
-      model: 'gpt-4-vision-preview',
-      stream: true,
-      max_tokens: 150,
+    const response = streamText({
+      model: openai('gpt-4o'),
+      maxOutputTokens: 150,
       messages: [
         ...initialMessages,
         {
-          ...currentMessage,
+          role: 'user',
           content: [
-            { type: 'text', text: currentMessage.content },
-
-            // forward the image information to OpenAI:
             {
-              type: 'image_url',
-              image_url: data.imageUrl,
+              type: 'text',
+              text: currentMessage.parts
+                .map(part => (part.type === 'text' ? part.text : ''))
+                .join(''),
             },
+            { type: 'image', image: new URL(data.imageUrl) },
           ],
         },
       ],
     });
 
-    // Convert the response into a friendly text-stream
-    const stream = OpenAIStream(response);
-
     // Respond with the stream
-    return new StreamingTextResponse(stream);
+    return response.toUIMessageStreamResponse();
   });
 });

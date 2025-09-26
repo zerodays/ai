@@ -1,46 +1,37 @@
-import OpenAI from 'openai';
-import {
-  OpenAIStream,
-  StreamingTextResponse,
-  experimental_StreamData,
-} from 'ai';
-
+import { createOpenAI } from '@ai-sdk/openai';
+import { streamText } from 'ai';
 import { env } from '$env/dynamic/private';
-// You may want to replace the above with a static private env variable
-// for dead-code elimination and build-time type-checking:
-// import { OPENAI_API_KEY } from '$env/static/private'
 
-import type { RequestHandler } from './$types';
-
-// Create an OpenAI API client
-const openai = new OpenAI({
-  apiKey: env.OPENAI_API_KEY || '',
+const openai = createOpenAI({
+  apiKey: env?.OPENAI_API_KEY,
 });
 
-export const POST = (async ({ request }) => {
-  // Extract the `prompt` from the body of the request
+const system = `
+Generate a completion for the given prompt. Your completion should never start with the text of the prompt, but should continue the prompt in a natural way.
+Your completion should provide a maximum of 100 additional words. Only provide completions you're highly confident are likely to be accurate.
+
+Here are some examples:
+- Prompt: "Hello,"
+  Completion: "Hello, world!"
+- Prompt: "The capital of France is"
+  Completion: "The capital of France is Paris."
+- Prompt: "We the people"
+  Completion: "We the people of the United States, in order to form a more perfect union, establish justice, insure domestic tranquility, provide for the common defense, promote the general welfare, and secure the blessings of liberty to ourselves and our posterity, do ordain and establish this Constitution for the United States of America."
+
+It is VERY IMPORTANT that your completion continues the prompt and does not repeat the prompt.
+`;
+
+export const POST = async ({ request }: { request: Request }) => {
   const { prompt } = await request.json();
 
-  // Ask OpenAI for a streaming chat completion given the prompt
-  const response = await openai.chat.completions.create({
-    model: 'gpt-3.5-turbo',
-    stream: true,
-    messages: [{ role: 'user', content: prompt }],
-  });
-
-  // optional: use stream data
-  const data = new experimental_StreamData();
-
-  data.append({ test: 'value' });
-
-  // Convert the response into a friendly text-stream
-  const stream = OpenAIStream(response, {
-    onFinal(completion) {
-      data.close();
+  const result = streamText({
+    model: openai('gpt-4o'),
+    system,
+    prompt,
+    onError: error => {
+      console.error(error);
     },
-    experimental_streamData: true,
   });
 
-  // Respond with the stream
-  return new StreamingTextResponse(stream, {}, data);
-}) satisfies RequestHandler;
+  return result.toUIMessageStreamResponse();
+};

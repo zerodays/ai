@@ -1,15 +1,11 @@
-import { experimental_streamText } from 'ai';
-import { OpenAI } from 'ai/openai';
-import dotenv from 'dotenv';
-
-dotenv.config();
-
-const openai = new OpenAI();
+import { openai } from '@ai-sdk/openai';
+import { streamText } from 'ai';
+import 'dotenv/config';
 
 async function main() {
-  const result = await experimental_streamText({
-    model: openai.chat('gpt-3.5-turbo'),
-    maxTokens: 512,
+  const result = streamText({
+    model: openai('gpt-3.5-turbo'),
+    maxOutputTokens: 512,
     temperature: 0.3,
     maxRetries: 5,
     prompt: 'Invent a new holiday and describe its traditions.',
@@ -18,6 +14,10 @@ async function main() {
   for await (const textPart of result.textStream) {
     process.stdout.write(textPart);
   }
+
+  console.log();
+  console.log('Token usage:', await result.usage);
+  console.log('Finish reason:', await result.finishReason);
 }
 
-main();
+main().catch(console.error);

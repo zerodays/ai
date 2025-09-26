@@ -1,37 +1,29 @@
-<script>
-	import { useChat } from 'ai/svelte'
+<main>
+  <header class="my-8 text-center">
+    <h1 class="mb-4 text-4xl font-bold">OpenAI + SvelteKit Demo</h1>
+    <p class="text-gray-600">
+      Select a demo to explore different OpenAI integration examples:
+    </p>
+  </header>
 
-	const { input, handleSubmit, messages } = useChat()
-</script>
-
-<svelte:head>
-	<title>Home</title>
-	<meta name="description" content="Svelte demo app" />
-</svelte:head>
-
-<section>
-	<h1>useChat</h1>
-	<ul>
-		{#each $messages as message}
-			<li>{message.role}: {message.content}</li>
-		{/each}
-	</ul>
-	<form on:submit={handleSubmit}>
-		<input bind:value={$input} />
-		<button type="submit">Send</button>
-	</form>
-</section>
-
-<style>
-	section {
-		display: flex;
-		flex-direction: column;
-		justify-content: center;
-		align-items: center;
-		flex: 0.6;
-	}
-
-	h1 {
-		width: 100%;
-	}
-</style>
+  <nav class="flex flex-col gap-4 items-center m-4">
+    <a
+      href="/chat"
+      class="px-6 py-3 w-full max-w-sm text-center bg-gray-100 rounded-lg transition-colors duration-200 hover:bg-gray-200"
+    >
+      Chat Demo
+    </a>
+    <a
+      href="/completion"
+      class="px-6 py-3 w-full max-w-sm text-center bg-gray-100 rounded-lg transition-colors duration-200 hover:bg-gray-200"
+    >
+      Completion Demo
+    </a>
+    <a
+      href="/structured-object"
+      class="px-6 py-3 w-full max-w-sm text-center bg-gray-100 rounded-lg transition-colors duration-200 hover:bg-gray-200"
+    >
+      Structured Object Demo
+    </a>
+  </nav>
+</main>
