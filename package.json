@@ -84,5 +84,8 @@
     "onlyBuiltDependencies": [
       "esbuild"
     ]
+  },
+  "publishConfig": {
+    "@zerodays:registry": "https://npm.pkg.github.com"
   }
 }
